@@ -73,3 +73,18 @@ if (!function_exists('zonaotaku_ua_sanitize')) {
         return $ua;
     }
 }
+
+if (!function_exists('zonaotaku_poster_url')) {
+    function zonaotaku_poster_url(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $path) === 1) {
+            return $path;
+        }
+
+        return url('/storage/' . ltrim($path, '/'));
+    }
+}

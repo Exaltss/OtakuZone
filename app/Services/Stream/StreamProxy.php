@@ -11,6 +11,7 @@ namespace App\Services\Stream;
 
 use App\Models\Episode;
 use App\Services\Security\AuditWriter;
+use App\Services\Security\IpHasher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -24,7 +25,8 @@ final class StreamProxy
         private readonly TokenService $tokens,
         private readonly QualityResolver $qualities,
         private readonly AdmissionControl $admission,
-        private readonly AuditWriter $audit
+        private readonly AuditWriter $audit,
+        private readonly IpHasher $hasher
     ) {
     }
 
@@ -109,7 +111,9 @@ final class StreamProxy
 
         $uid = (int) ($payload['uid'] ?? 0);
 
-        if (!$this->admission->allow($uid)) {
+        $guestKey = $uid === 0 ? $this->hasher->hashIpPrefix($ip) : null;
+
+        if (!$this->admission->allow($uid, $guestKey)) {
             return $this->error(
                 503,
                 'stream.admission_reject',

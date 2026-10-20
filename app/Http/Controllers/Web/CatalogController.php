@@ -84,7 +84,24 @@ final class CatalogController extends Controller
                 ->get()
             : collect();
 
-        $latest = $home ? Anime::query()->visible()->orderByDesc('synced_at')->limit(12)->get() : collect();
+        $yearCut = (int) now()->format('Y');
+
+        $latest = $home
+            ? Anime::query()->visible()
+                ->where(static fn ($q) => $q->where('year', '>=', $yearCut)->orWhere('status', 'ongoing'))
+                ->joinSub(
+                    Episode::query()
+                        ->selectRaw('anime_id, MAX(synced_at) AS last_sync')
+                        ->groupBy('anime_id'),
+                    'ep_agg',
+                    'ep_agg.anime_id',
+                    '=',
+                    'anime.id'
+                )
+                ->orderByDesc('ep_agg.last_sync')
+                ->limit(12)
+                ->get(['anime.*'])
+            : collect();
         $picks = $home ? Anime::query()->visible()->orderByDesc('rating_avg')->limit(12)->get() : collect();
         $popular = $home ? Anime::query()->visible()->orderByDesc('view_count')->limit(5)->get() : collect();
         $genres = $home ? Genre::query()->orderBy('name')->limit(8)->pluck('name')->all() : [];
@@ -123,7 +140,7 @@ final class CatalogController extends Controller
                 'status' => $anime->status,
                 'year' => $anime->year,
                 'rating_avg' => $anime->rating_avg === null ? null : (float) $anime->rating_avg,
-                'poster' => $thumb?->thumbnail_path,
+                'poster' => zonaotaku_poster_url($anime->image_path) ?? $thumb?->thumbnail_path,
                 'episode_count' => (int) ($row->ep_count ?? 0),
                 'last_episode' => $row === null ? null : (float) $row->last_number,
                 'latest_episode_id' => (int) ($latestEpIds->get($anime->id) ?? 0),
@@ -167,7 +184,7 @@ final class CatalogController extends Controller
             'featured' => $featured
                 ->map(static fn (Anime $anime): array => $card($anime) + [
                     'synopsis' => $anime->synopsis,
-                    'image_path' => $anime->image_path,
+                    'image_path' => zonaotaku_poster_url($anime->image_path),
                 ])
                 ->values()
                 ->all(),

@@ -21,6 +21,7 @@ type Props = {
   episode: Episode;
   qualities: string[];
   defaultQuality: string | null;
+  signMode: 'local' | 'guest';
 };
 
 const nf = new Intl.NumberFormat('id-ID');
@@ -78,7 +79,7 @@ const PlayIcon = () => (
   </svg>
 );
 
-export default function Index({ anime, episode, qualities, defaultQuality }: Props) {
+export default function Index({ anime, episode, qualities, defaultQuality, signMode }: Props) {
   const [quality, setQuality] = useState(defaultQuality ?? qualities[0] ?? '720');
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -94,17 +95,38 @@ export default function Index({ anime, episode, qualities, defaultQuality }: Pro
     try {
       const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-      const response = await fetch('/api/local/stream/sign', {
+      const headers = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      };
+
+      let nonce: string | undefined;
+
+      if (signMode === 'guest') {
+        const nres = await fetch('/api/guest/stream/nonce', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({}),
+        });
+
+        const ndata = await nres.json();
+
+        if (!nres.ok) {
+          throw new Error(ndata?.error?.message ?? `HTTP ${nres.status}`);
+        }
+
+        nonce = ndata.nonce;
+      }
+
+      const response = await fetch(signMode === 'guest' ? '/api/guest/stream/sign' : '/api/local/stream/sign', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'X-CSRF-TOKEN': csrf,
-          'X-Requested-With': 'XMLHttpRequest',
-        },
+        headers,
         body: JSON.stringify({
           episode_id: Number(episode.id),
           quality,
+          ...(nonce ? { nonce } : {}),
         }),
       });
 

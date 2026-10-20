@@ -55,6 +55,7 @@ final class WatchController extends Controller
             ],
             'qualities' => $available,
             'defaultQuality' => $default,
+            'signMode' => app()->environment('local') ? 'local' : 'guest',
         ]);
     }
 }

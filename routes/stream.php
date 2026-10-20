@@ -7,6 +7,8 @@
  */
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\GuestStreamNonceController;
+use App\Http\Controllers\Api\GuestStreamSignController;
 use App\Http\Controllers\Api\LocalStreamSignController;
 use App\Http\Controllers\Api\StreamNonceController;
 use App\Http\Controllers\Api\StreamProxyController;
@@ -27,6 +29,16 @@ Route::middleware(['web', 'auth', 'throttle:' . $signThrottle . ',1'])->group(fu
 Route::post('/api/local/stream/sign', [LocalStreamSignController::class, 'store'])
     ->middleware(['web', 'local.only', 'throttle:120,1'])
     ->name('stream.local.sign');
+
+$guestThrottle = (int) config('zonaotaku.throttle.guest_sign', 30);
+
+Route::middleware(['web', 'throttle:' . $guestThrottle . ',1'])->group(function (): void {
+    Route::post('/api/guest/stream/nonce', [GuestStreamNonceController::class, 'store'])
+        ->name('stream.guest.nonce');
+
+    Route::post('/api/guest/stream/sign', [GuestStreamSignController::class, 'store'])
+        ->name('stream.guest.sign');
+});
 
 Route::get('/stream/play/{token}', [StreamProxyController::class, 'play'])
     ->middleware([StreamNoCompress::class])

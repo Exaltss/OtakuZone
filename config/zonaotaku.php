@@ -44,6 +44,7 @@ return [
     'stream' => [
         'secret' => env('STREAM_SECRET'),
         'token_ttl' => (int) env('STREAM_TOKEN_TTL', 2100),
+        'guest_token_ttl' => (int) env('STREAM_GUEST_TOKEN_TTL', 1200),
         'nonce_ttl' => (int) env('STREAM_NONCE_TTL', 30),
         'chunk_size' => (int) env('STREAM_CHUNK_SIZE', 2097152),
         'bound_ip' => (bool) env('STREAM_BOUND_IP', true),
@@ -74,6 +75,7 @@ return [
         'sign' => (int) env('THROTTLE_SIGN', 20),
         'nonce' => (int) env('THROTTLE_SIGN', 20),
         'login' => (int) env('THROTTLE_LOGIN', 5),
+        'guest_sign' => (int) env('THROTTLE_GUEST_SIGN', 30),
     ],
 
     'backup' => [

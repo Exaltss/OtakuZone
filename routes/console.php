@@ -37,3 +37,7 @@ Schedule::command('backup:offsite')
     ->sundays()
     ->at('04:00')
     ->withoutOverlapping(180);
+
+Schedule::command('zo:fetch-posters --limit=60')
+    ->hourly()
+    ->withoutOverlapping(59);
