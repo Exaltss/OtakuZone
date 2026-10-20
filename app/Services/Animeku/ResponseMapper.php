@@ -54,7 +54,7 @@ final class ResponseMapper
             'slug' => $slug,
             'image_path' => null,
             'synopsis' => $this->stripUrlText($this->plainText($descriptionRaw)),
-            'type' => $this->deriveType($item),
+            'type' => $this->deriveType($item, $descriptionRaw),
             'status' => $this->deriveStatus($item, $durationRaw, $descriptionRaw),
             'year' => $this->deriveYear($item, $descriptionRaw),
             'season' => null,
@@ -127,8 +127,14 @@ final class ResponseMapper
     /**
      * @param array<string,mixed> $item
      */
-    private function deriveType(array $item): ?string
+    private function deriveType(array $item, string $description = ''): ?string
     {
+        $fromText = $this->typeFromText($description);
+
+        if ($fromText !== null) {
+            return $fromText;
+        }
+
         $value = $item['video_type'] ?? null;
 
         if (!is_string($value)) {
@@ -137,7 +143,35 @@ final class ResponseMapper
 
         $value = trim($value);
 
-        return $value === '' ? null : Str::limit($value, 40, '');
+        if ($value === '') {
+            return null;
+        }
+
+        $known = ['tv', 'movie', 'ova', 'ona', 'special', 'music'];
+
+        return $this->typeFromText($value)
+            ?? (in_array(strtolower($value), $known, true) ? ucfirst(strtolower($value)) : null);
+    }
+
+    private function typeFromText(string $text): ?string
+    {
+        if (preg_match('/Information\s+Type:\s*([A-Za-z]+)/i', $text, $m) === 1) {
+            $candidate = strtolower($m[1]);
+        } elseif (preg_match('/\bType:\s*(Movie|TV|OVA|ONA|Special|Music)\b/i', $text, $m) === 1) {
+            $candidate = strtolower($m[1]);
+        } else {
+            $candidate = '';
+        }
+
+        return match ($candidate) {
+            'movie' => 'Movie',
+            'tv' => 'TV',
+            'ova' => 'OVA',
+            'ona' => 'ONA',
+            'special' => 'Special',
+            'music' => 'Music',
+            default => null,
+        };
     }
 
     /**

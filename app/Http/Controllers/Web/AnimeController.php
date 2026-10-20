@@ -54,6 +54,7 @@ final class AnimeController extends Controller
                 'cat_id' => $anime->cat_id,
                 'synopsis' => $anime->synopsis,
                 'episodes_total' => (int) ($anime->episodes_total ?? 0),
+                'image_path' => $anime->image_path,
             ],
             'episodes' => $episodes->map(static fn (Episode $episode): array => [
                 'id' => (int) $episode->id,

@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body,
 #app {
@@ -9,7 +13,31 @@ body,
 }
 
 body {
-  background: #020617;
+  background: #0a0f1c;
   color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
 }
 
+::selection {
+  background: rgba(249, 160, 63, 0.35);
+  color: #fff7ed;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1a2740 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #1a2740;
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}

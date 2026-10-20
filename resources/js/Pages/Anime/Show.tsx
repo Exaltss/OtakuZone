@@ -1,18 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
-
-type Anime = {
-  id: number;
-  slug: string;
-  title: string;
-  type: string | null;
-  status: string | null;
-  year: number | null;
-  rating_avg: number | string | null;
-  view_count: number | null;
-  cat_id: number | null;
-  synopsis: string | null;
-  episodes_total: number;
-};
+import MainLayout from '@/Layouts/MainLayout';
+import { Poster, SectionHead, fmtEpisode } from '@/Components/AnimeCard';
 
 type Episode = {
   id: number;
@@ -21,176 +9,169 @@ type Episode = {
   duration_sec: number | null;
 };
 
-type Stats = {
-  episode_count: number;
-  max_number: number | null;
-};
-
 type Props = {
-  anime: Anime;
+  anime: {
+    id: number;
+    slug: string;
+    title: string;
+    type: string | null;
+    status: string | null;
+    year: number | null;
+    rating_avg: string | number | null;
+    view_count: number | null;
+    cat_id: number | null;
+    synopsis: string | null;
+    episodes_total: number;
+    image_path: string | null;
+  };
   episodes: Episode[];
-  stats: Stats;
+  stats: {
+    episode_count: number;
+    max_number: number | null;
+  };
 };
 
 const nf = new Intl.NumberFormat('id-ID');
-
 const fmt = (value: number | string | null | undefined): string => {
-  if (value === null || value === undefined || value === '') {
-    return '-';
-  }
-
+  if (value === null || value === undefined || value === '') return '-';
   const numeric = Number(value);
-
-  if (Number.isNaN(numeric)) {
-    return String(value);
-  }
-
-  return nf.format(numeric);
+  return Number.isNaN(numeric) ? String(value) : nf.format(numeric);
 };
 
 const duration = (seconds: number | null): string => {
-  if (!seconds || seconds <= 0) {
-    return '-';
-  }
-
+  if (!seconds || seconds <= 0) return '-';
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-
   return `${m}m ${s.toString().padStart(2, '0')}s`;
 };
 
-const hasEpisodeMarker = (title: string): boolean => {
-  return /\b(?:eps?|episode|ep)\.?\s*#?\s*\d+/iu.test(title);
-};
-
-const episodeHundredths = (value: number): number => {
-  return Math.round(value * 100);
-};
-
-const formatPlainNumber = (value: number): string => {
-  const hundredths = episodeHundredths(value);
-  const base = Math.floor(hundredths / 100);
-  const frac = hundredths % 100;
-
-  if (frac === 0) {
-    return String(base);
-  }
-
-  return `${base},${frac.toString().padStart(2, '0')}`;
-};
-
-const episodeLabel = (episode: Episode): string => {
-  const title = episode.title ?? '';
-  const hundredths = episodeHundredths(Number(episode.number || 0));
-  const base = Math.floor(hundredths / 100);
-  const frac = hundredths % 100;
-
-  if (!hasEpisodeMarker(title)) {
-    return title || `Episode ${formatPlainNumber(Number(episode.number || 0))}`;
-  }
-
-  if (frac === 0) {
-    return `Episode ${base}`;
-  }
-
-  return `Episode ${base} (varian ${frac})`;
-};
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+    <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+  </svg>
+);
 
 export default function Show({ anime, episodes, stats }: Props) {
+  const ongoing = (anime.status ?? '').toLowerCase() === 'ongoing';
+  const first = episodes[0];
+
   return (
-    <>
+    <MainLayout>
       <Head title={anime.title} />
 
-      <div className="min-h-screen">
-        <header className="border-b border-white/10 bg-slate-950/85">
-          <div className="mx-auto max-w-7xl px-4 py-5">
-            <Link href="/" className="text-xs font-semibold text-sky-300 hover:text-sky-200">
-              ← Kembali ke katalog
-            </Link>
+      <section className="relative overflow-hidden border-b border-white/5">
+        <div className="absolute inset-0">
+          <Poster src={anime.image_path} title={anime.title} className="scale-105 blur-[3px]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-night-900 via-night-900/90 to-night-900/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-night-900 via-transparent to-night-900/60" />
+        </div>
 
-            <div className="mt-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <h1 className="text-3xl font-black tracking-tight text-white">{anime.title}</h1>
+        <div className="relative mx-auto max-w-7xl px-4 py-14 md:px-6 md:py-20">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-sky-300 transition hover:text-sky-200"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+              <path d="M19 12H5m6 6-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Kembali ke katalog
+          </Link>
 
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-md bg-sky-500/15 px-2 py-1 text-sky-200 ring-1 ring-inset ring-sky-400/20">
-                    {anime.type ?? 'type?'}
-                  </span>
-                  <span className="rounded-md bg-emerald-500/15 px-2 py-1 text-emerald-200 ring-1 ring-inset ring-emerald-400/20">
-                    {anime.status ?? 'status?'}
-                  </span>
-                  <span className="rounded-md bg-amber-500/15 px-2 py-1 text-amber-200 ring-1 ring-inset ring-amber-400/20">
-                    {anime.year ?? 'year?'}
-                  </span>
-                  <span className="rounded-md bg-slate-500/15 px-2 py-1 text-slate-200 ring-1 ring-inset ring-slate-400/20">
-                    cat_id {fmt(anime.cat_id)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-right md:grid-cols-4">
-                {[
-                  { label: 'DB Episodes', value: fmt(stats.episode_count) },
-                  { label: 'Episodes Total', value: fmt(anime.episodes_total) },
-                  { label: 'Max Number', value: fmt(stats.max_number) },
-                  { label: 'Views', value: fmt(anime.view_count) },
-                ].map((card) => (
-                  <div key={card.label} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-wide text-slate-400">{card.label}</div>
-                    <div className="mt-1 text-sm font-bold tabular-nums text-white">{card.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {anime.synopsis ? (
-              <p className="mt-5 max-w-4xl text-sm leading-relaxed text-slate-300">
-                {anime.synopsis}
-              </p>
-            ) : null}
+          <div className="mt-6 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.3em] text-accent">
+            <span className="h-px w-6 bg-accent" />
+            Detail anime
           </div>
-        </header>
 
-        <main className="mx-auto max-w-7xl px-4 py-6">
-          <section className="rounded-xl border border-white/10 bg-white/5">
-            <div className="border-b border-white/10 px-4 py-3">
-              <h2 className="text-sm font-bold text-white">Daftar Episode</h2>
-              <p className="mt-1 text-xs text-slate-400">
-                Urutan memakai nomor episode asli. Duplikat diberi varian .01, .02, dst.
-              </p>
-            </div>
+          <h1 className="mt-4 max-w-3xl text-4xl font-extrabold tracking-tight text-white md:text-5xl">
+            {anime.title}
+            <span className="text-sky-400">.</span>
+          </h1>
 
-            {episodes.length === 0 ? (
-              <div className="px-4 py-10 text-center text-sm text-slate-400">
-                Belum ada episode tersimpan untuk anime ini.
-              </div>
-            ) : (
-              <div className="divide-y divide-white/5">
-                {episodes.map((episode) => (
-                  <Link
-                    key={episode.id}
-                    href={`/watch/${episode.id}`}
-                    className="flex items-center justify-between gap-4 px-4 py-3 transition hover:bg-white/5"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-white">
-                        {episodeLabel(episode)}
-                      </div>
-                      <div className="mt-1 truncate text-xs text-slate-400">
-                        {episode.title} · episode_id {fmt(episode.id)} · durasi {duration(episode.duration_sec)}
-                      </div>
-                    </div>
+          <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-slate-300">
+            <span className="rounded-md bg-white/5 px-2.5 py-1 ring-1 ring-inset ring-white/10">
+              {((anime.type ?? '') + '').toLowerCase() === 'movie' ? 'Movie' : 'TV Series'}
+            </span>
+            <span className="rounded-md bg-white/5 px-2.5 py-1 ring-1 ring-inset ring-white/10">{anime.year ?? '????'}</span>
+            <span
+              className={`rounded-md px-2.5 py-1 ring-1 ring-inset ${
+                ongoing
+                  ? 'bg-sky-500/10 text-sky-200 ring-sky-400/20'
+                  : 'bg-emerald-500/10 text-emerald-200 ring-emerald-400/20'
+              }`}
+            >
+              {(anime.status ?? 'unknown').toUpperCase()}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-black/50 px-2.5 py-1 font-bold text-white">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3 text-accent">
+                <path d="m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.2l7.1-.6L12 2Z" />
+              </svg>
+              {anime.rating_avg === null ? '-' : Number(anime.rating_avg).toFixed(1)}
+            </span>
+          </div>
 
-                    <span className="shrink-0 rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-bold text-slate-950">
-                      Putar
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-        </main>
+          {anime.synopsis ? (
+            <p className="mt-6 max-w-xl text-sm leading-relaxed text-slate-300">{anime.synopsis}</p>
+          ) : null}
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            {first ? (
+              <Link
+                href={`/watch/${first.id}`}
+                className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-3 text-sm font-bold text-night-950 transition hover:bg-accent-soft"
+              >
+                <PlayIcon />
+                Mulai nonton
+              </Link>
+            ) : null}
+            <span className="text-sm text-slate-400">
+              <span className="font-semibold text-slate-200">{fmt(stats.episode_count)}</span> episode tersimpan
+              {stats.max_number !== null ? ` · terakhir ep ${fmtEpisode(Number(stats.max_number))}` : ''}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
+        <SectionHead
+          eyebrow="Daftar episode"
+          icon={<PlayIcon />}
+          title="Pilih episode"
+          action={{ label: 'Katalog', href: '/' }}
+        />
+
+        {episodes.length === 0 ? (
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-10 text-center text-sm text-slate-400">
+            Episode belum tersinkron untuk seri ini.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {episodes.map((episode) => (
+              <Link
+                key={episode.id}
+                href={`/watch/${episode.id}`}
+                className="group flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.03] p-4 transition hover:border-accent/40 hover:bg-white/[0.06]"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-night-800 text-sm font-black tabular-nums text-accent ring-1 ring-inset ring-white/5">
+                  {fmtEpisode(Number(episode.number))}
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-white transition group-hover:text-accent-soft">
+                    Episode {fmtEpisode(Number(episode.number))}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-slate-500">
+                    {episode.title || 'Tanpa judul'} · {duration(episode.duration_sec)}
+                  </span>
+                </span>
+
+                <span className="text-slate-500 transition group-hover:text-accent">
+                  <PlayIcon />
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
-    </>
+    </MainLayout>
   );
 }
