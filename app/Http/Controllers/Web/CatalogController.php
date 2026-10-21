@@ -12,7 +12,6 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Anime;
 use App\Models\Episode;
-use App\Models\Genre;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -25,10 +24,11 @@ final class CatalogController extends Controller
         $q = trim((string) $request->query('q', ''));
         $sort = trim((string) $request->query('sort', ''));
         $type = trim((string) $request->query('type', ''));
+        $genre = trim((string) $request->query('genre', ''));
         $perPage = 48;
         $page = max(1, (int) $request->query('page', 1));
 
-        $home = $q === '' && $sort === '' && $type === '' && $page === 1;
+        $home = $q === '' && $sort === '' && $type === '' && $genre === '' && $page === 1;
 
         $query = Anime::query()->visible();
 
@@ -52,6 +52,10 @@ final class CatalogController extends Controller
             } else {
                 $query->whereRaw("LOWER(COALESCE(type, '')) = ?", [$norm]);
             }
+        }
+
+        if ($genre !== '') {
+            $query->whereRaw("FIND_IN_SET(?, COALESCE(genres_csv, '')) > 0", [$genre]);
         }
 
         [$orderColumn, $orderDir] = match ($sort) {
@@ -104,7 +108,6 @@ final class CatalogController extends Controller
             : collect();
         $picks = $home ? Anime::query()->visible()->orderByDesc('rating_avg')->limit(12)->get() : collect();
         $popular = $home ? Anime::query()->visible()->orderByDesc('view_count')->limit(5)->get() : collect();
-        $genres = $home ? Genre::query()->orderBy('name')->limit(8)->pluck('name')->all() : [];
 
         /** @var Collection<int, Anime> $all */
         $all = collect([$featured, $latest, $picks, $popular, $items])->collapse();
@@ -180,6 +183,7 @@ final class CatalogController extends Controller
                 'q' => $q,
                 'sort' => $sort,
                 'type' => $type,
+                'genre' => $genre,
             ],
             'featured' => $featured
                 ->map(static fn (Anime $anime): array => $card($anime) + [
@@ -191,7 +195,6 @@ final class CatalogController extends Controller
             'latest' => $mapCards($latest),
             'picks' => $mapCards($picks),
             'popular' => $mapCards($popular),
-            'genres' => $genres,
         ]);
     }
 }

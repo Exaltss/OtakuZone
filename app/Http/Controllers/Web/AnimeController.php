@@ -12,13 +12,15 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Anime;
 use App\Models\Episode;
+use App\Services\Stream\QualityResolver;
+use App\Support\SynopsisParser;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final class AnimeController extends Controller
 {
-    public function show(Request $request, string $slug): Response
+    public function show(Request $request, string $slug, QualityResolver $qualityResolver): Response
     {
         $anime = Anime::query()
             ->visible()
@@ -39,7 +41,18 @@ final class AnimeController extends Controller
                 'number',
                 'title',
                 'duration_sec',
+                'quality_urls',
             ]);
+
+        $parsed = SynopsisParser::parse($anime->synopsis);
+
+        $first = $episodes->first();
+        $initialQualities = [];
+
+        if ($first !== null) {
+            $map = $first->quality_urls ?? [];
+            $initialQualities = $qualityResolver->available(is_array($map) ? $map : []);
+        }
 
         return Inertia::render('Anime/Show', [
             'anime' => [
@@ -49,10 +62,13 @@ final class AnimeController extends Controller
                 'type' => $anime->type,
                 'status' => $anime->status,
                 'year' => $anime->year,
+                'season' => $anime->season,
                 'rating_avg' => $anime->rating_avg,
                 'view_count' => $anime->view_count,
                 'cat_id' => $anime->cat_id,
-                'synopsis' => $anime->synopsis,
+                'synopsis' => $parsed['synopsis'],
+                'genres' => $parsed['genres'],
+                'meta' => $parsed['meta'],
                 'episodes_total' => (int) ($anime->episodes_total ?? 0),
                 'image_path' => zonaotaku_poster_url($anime->image_path),
             ],
@@ -66,6 +82,9 @@ final class AnimeController extends Controller
                 'episode_count' => $episodes->count(),
                 'max_number' => $episodes->max('number'),
             ],
+            'initialQualities' => $initialQualities,
+            'signMode' => app()->environment('local') ? 'local' : 'guest',
         ]);
     }
+
 }

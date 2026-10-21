@@ -50,7 +50,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     { label: 'Jelajah anime', href: '/?sort=title' },
     { label: 'Anime terbaik', href: '/?sort=rating' },
     { label: 'Movie', href: '/?type=movie' },
-    { label: 'Genre', href: '/#genre' },
+    { label: 'Genre', href: '/genres' },
   ];
 
   return (

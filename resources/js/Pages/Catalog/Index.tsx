@@ -29,12 +29,11 @@ type Props = {
   items: CardItem[];
   meta: Meta;
   stats: Stats;
-  filters: { q: string; sort: string; type: string };
+  filters: { q: string; sort: string; type: string; genre: string };
   featured: Featured[];
   latest: CardItem[];
   picks: CardItem[];
   popular: CardItem[];
-  genres: string[];
 };
 
 const nf = new Intl.NumberFormat('id-ID');
@@ -277,7 +276,7 @@ function MoviePanel({ picks }: { picks: CardItem[] }) {
   );
 }
 
-export default function Index({ mode, items, meta, stats, filters, featured, latest, picks, popular, genres }: Props) {
+export default function Index({ mode, items, meta, stats, filters, featured, latest, picks, popular }: Props) {
   const home = mode === 'home';
 
   const pageHref = (page: number) => {
@@ -286,6 +285,7 @@ export default function Index({ mode, items, meta, stats, filters, featured, lat
     if (filters.q !== '') params.set('q', filters.q);
     if (filters.sort !== '') params.set('sort', filters.sort);
     if (filters.type !== '') params.set('type', filters.type);
+    if (filters.genre !== '') params.set('genre', filters.genre);
     if (page > 1) params.set('page', String(page));
 
     const query = params.toString();
@@ -310,20 +310,6 @@ export default function Index({ mode, items, meta, stats, filters, featured, lat
             </div>
 
             <Hero featured={featured} />
-
-            <div id="genre" className="mt-6 flex flex-wrap items-center gap-3">
-              <span className="text-sm text-slate-400">Mau cerita seperti apa?</span>
-              {genres.map((genre) => (
-                <a
-                  key={genre}
-                  href={`/?q=${encodeURIComponent(genre)}`}
-                  className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-200 transition hover:border-accent/50 hover:text-white"
-                >
-                  # {genre}
-                </a>
-              ))}
-              {genres.length === 0 ? <span className="text-sm text-slate-500">Genre belum tersinkron.</span> : null}
-            </div>
 
             <section className="mt-10 rounded-2xl border border-sky-400/10 bg-gradient-to-r from-night-800 to-night-850 p-6 md:p-7">
               <div className="flex flex-col items-start gap-5 md:flex-row md:items-center">
@@ -430,14 +416,16 @@ export default function Index({ mode, items, meta, stats, filters, featured, lat
         ) : (
           <>
             <SectionHead
-              eyebrow={filters.q !== '' ? 'Hasil pencarian' : filters.type === 'movie' ? 'Koleksi movie' : 'Katalog lokal'}
+              eyebrow={filters.genre !== '' ? 'Filter genre' : filters.q !== '' ? 'Hasil pencarian' : filters.type === 'movie' ? 'Koleksi movie' : 'Katalog lokal'}
               icon={
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
                   <path d="M12 2 9.1 8.6 2 9.2l5.4 4.7-1.6 7 6.2-3.7 6.2 3.7-1.6-7L22 9.2l-7.1-.6L12 2Z" />
                 </svg>
               }
               title={
-                filters.q !== ''
+                filters.genre !== ''
+                  ? `Genre: ${filters.genre}`
+                  : filters.q !== ''
                   ? `“${filters.q}”`
                   : filters.type === 'movie'
                     ? 'Movie'
@@ -459,6 +447,14 @@ export default function Index({ mode, items, meta, stats, filters, featured, lat
                     : filters.sort === 'updated'
                       ? ' · urut update terbaru'
                       : ''}
+              {filters.genre !== '' ? (
+                <>
+                  {' · '}
+                  <a href="/genres" className="font-semibold text-accent transition hover:text-accent-soft">
+                    ganti genre
+                  </a>
+                </>
+              ) : null}
             </p>
 
             {items.length === 0 ? (

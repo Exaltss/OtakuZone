@@ -9,11 +9,15 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Web\AnimeController;
 use App\Http\Controllers\Web\CatalogController;
+use App\Http\Controllers\Web\GenreController;
 use App\Http\Controllers\Web\WatchController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', CatalogController::class)
     ->name('catalog.index');
+
+Route::get('/genres', GenreController::class)
+    ->name('genres.index');
 
 Route::get('/anime/{slug}', [AnimeController::class, 'show'])
     ->name('anime.show');
