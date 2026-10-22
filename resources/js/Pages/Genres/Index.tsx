@@ -1,5 +1,4 @@
 import { Head, Link } from '@inertiajs/react';
-import MainLayout from '@/Layouts/MainLayout';
 import { SectionHead } from '@/Components/AnimeCard';
 
 type GenreRow = {
@@ -32,7 +31,7 @@ const TagIcon = () => (
 
 export default function Index({ genres, stats }: Props) {
   return (
-    <MainLayout>
+    <>
       <Head title="Semua genre · Zonaotaku" />
 
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-8 md:px-6">
@@ -81,6 +80,6 @@ export default function Index({ genres, stats }: Props) {
           </div>
         )}
       </div>
-    </MainLayout>
+    </>
   );
 }

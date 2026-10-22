@@ -5,11 +5,18 @@
 
     RewriteEngine On
 
-    # Handle Authorization Header
+    # Force HTTPS hanya di domain produksi (bukan 127.0.0.1 / localhost)
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP_HOST} !^(127\.0\.0\.1|localhost)(:[0-9]+)?$ [NC]
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    # Blokir akses dotfile tersembunyi
+    RewriteCond %{REQUEST_URI} ^/\.
+    RewriteRule ^ - [F]
+
+    # Handle Authorization & XSRF Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-    # Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
@@ -23,3 +30,18 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "DENY"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+<IfModule mod_setenvif.c>
+    SetEnvIf Request_URI "^/stream/" no-gzip=1
+</IfModule>
+
+<FilesMatch "\.(env|log|lock|md)$">
+    Require all denied
+</FilesMatch>

@@ -1,6 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
 import { ReactNode, useMemo, useRef, useState } from 'react';
-import MainLayout from '@/Layouts/MainLayout';
 import { Poster, fmtEpisode } from '@/Components/AnimeCard';
 
 type Episode = {
@@ -25,6 +24,10 @@ type Props = {
     year: number | null;
     season: string | null;
     rating_avg: string | number | null;
+    rating_count: number;
+    rating_has_mine: boolean;
+    vote_avg: number | null;
+    vote_count: number;
     view_count: number | null;
     cat_id: number | null;
     synopsis: string | null;
@@ -126,6 +129,12 @@ export default function Show({ anime, episodes, stats, initialQualities, signMod
   const [error, setError] = useState<string | null>(null);
   const [hasPlayed, setHasPlayed] = useState(false);
   const [search, setSearch] = useState('');
+  const [myScore, setMyScore] = useState<number | null>(null);
+  const [voteAvg, setVoteAvg] = useState<number | null>(anime.vote_avg);
+  const [voteCount, setVoteCount] = useState<number>(anime.vote_count);
+  const [ratingBusy, setRatingBusy] = useState(false);
+  const [ratingMsg, setRatingMsg] = useState<string | null>(null);
+  const [hasMine, setHasMine] = useState<boolean>(anime.rating_has_mine);
   const [sortAsc, setSortAsc] = useState(true);
   const playerRef = useRef<HTMLDivElement | null>(null);
 
@@ -210,6 +219,38 @@ export default function Show({ anime, episodes, stats, initialQualities, signMod
     }
   };
 
+  const submitRating = async (score: number) => {
+    setRatingBusy(true);
+    setRatingMsg(null);
+    setMyScore(score);
+
+    try {
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+      const res = await fetch('/api/ratings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': csrf,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ anime_id: anime.id, score }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data?.error?.message ?? `HTTP ${res.status}`);
+
+      setVoteAvg(data.rating_avg === null ? null : Number(data.rating_avg));
+      setVoteCount((c) => c + 1);
+      setHasMine(true);
+      setRatingMsg('Terima kasih! Suara Anda tercatat dan tidak dapat diubah.');
+    } catch (err) {
+      setRatingMsg(err instanceof Error ? err.message : 'Gagal mengirim rating.');
+    } finally {
+      setRatingBusy(false);
+    }
+  };
+
   const selectEpisode = (id: number) => {
     setEpisodeId(id);
     void play(id, quality);
@@ -232,7 +273,7 @@ export default function Show({ anime, episodes, stats, initialQualities, signMod
   };
 
   return (
-    <MainLayout>
+    <>
       <Head title={`${anime.title} · Zonaotaku`} />
 
       {/* ============ HERO ============ */}
@@ -491,6 +532,45 @@ export default function Show({ anime, episodes, stats, initialQualities, signMod
           {/* ---- kanan: resolusi (atas) + daftar episode (bawah) ---- */}
           <aside className="flex min-w-0 flex-col gap-6">
             <section className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
+              <Eyebrow>Vote komunitas</Eyebrow>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-extrabold text-white">
+                  {voteAvg === null ? '-' : voteAvg.toFixed(1)}
+                  <span className="text-sm font-semibold text-slate-400">/10</span>
+                </span>
+                <span className="text-xs text-slate-500">{fmt(voteCount)} suara</span>
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Rating sumber: {anime.rating_avg === null ? '-' : Number(anime.rating_avg).toFixed(1)}/10 ·
+                tidak berubah oleh vote.
+              </p>
+
+              <p className="mt-3 text-xs text-slate-400">
+                {hasMine
+                  ? 'Anda sudah memberi suara untuk anime ini.'
+                  : 'Beri suara Anda (guest maupun login), satu suara per orang:'}
+              </p>
+              <div className="mt-2 grid grid-cols-5 gap-1.5">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+                  <button
+                    key={score}
+                    type="button"
+                    disabled={ratingBusy || hasMine}
+                    onClick={() => void submitRating(score)}
+                    className={`rounded-md py-1.5 text-xs font-black tabular-nums ring-1 ring-inset transition ${
+                      myScore === score
+                        ? 'bg-accent text-night-950 ring-accent'
+                        : 'bg-night-800 text-slate-200 ring-white/10 hover:bg-night-700 hover:text-accent-soft'
+                    } disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    {score}
+                  </button>
+                ))}
+              </div>
+              {ratingMsg ? <p className="mt-2 text-xs text-slate-400">{ratingMsg}</p> : null}
+            </section>
+
+            <section className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
               <Eyebrow>Pilih kualitas</Eyebrow>
               <h2 className="mt-2 text-lg font-extrabold text-white">Resolusi</h2>
 
@@ -589,6 +669,6 @@ export default function Show({ anime, episodes, stats, initialQualities, signMod
           </aside>
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }

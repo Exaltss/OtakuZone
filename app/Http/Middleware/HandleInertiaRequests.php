@@ -20,8 +20,20 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return array_merge(parent::share($request), [
             'appName' => config('app.name', 'Zonaotaku'),
+            'openRegistration' => (bool) config('zonaotaku.security.open_registration', false),
+            'auth' => [
+                'user' => $user ? [
+                    'id' => (int) $user->id,
+                    'name' => (string) $user->name,
+                    'email' => (string) $user->email,
+                    'role' => (string) $user->role,
+                    'is_admin' => $user->isAdmin(),
+                ] : null,
+            ],
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

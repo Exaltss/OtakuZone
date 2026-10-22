@@ -18,6 +18,7 @@ class Rating extends Model
 
     protected $fillable = [
         'user_id',
+        'guest_key',
         'anime_id',
         'score',
         'review_text',

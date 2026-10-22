@@ -1,8 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
-import { FormEvent, ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
+import LiveSearch from '@/Components/LiveSearch';
 
 type SharedProps = {
   appName?: string;
+  auth?: {
+    user: { id: number; name: string; email: string; role: string; is_admin: boolean } | null;
+  };
 };
 
 const SearchIcon = () => (
@@ -38,19 +42,29 @@ export function Logo() {
 }
 
 export default function MainLayout({ children }: { children: ReactNode }) {
-  const [q, setQ] = useState('');
+  const { auth } = usePage<SharedProps>().props;
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    window.location.href = q.trim() === '' ? '/' : `/?q=${encodeURIComponent(q.trim())}`;
+  const logout = async () => {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+    await fetch('/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+    window.location.href = '/';
   };
 
   const nav = [
     { label: 'Beranda', href: '/' },
-    { label: 'Jelajah anime', href: '/?sort=title' },
+    { label: 'Jelajah anime', href: '/browse' },
     { label: 'Anime terbaik', href: '/?sort=rating' },
     { label: 'Movie', href: '/?type=movie' },
     { label: 'Genre', href: '/genres' },
+    ...(auth?.user ? [{ label: 'Koleksi', href: '/library' }] : []),
   ];
 
   return (
@@ -71,19 +85,39 @@ export default function MainLayout({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <form onSubmit={submit} className="ml-auto flex items-center">
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
-                <SearchIcon />
-              </span>
-              <input
-                value={q}
-                onChange={(event) => setQ(event.target.value)}
-                placeholder="Cari anime favoritmu..."
-                className="h-10 w-44 rounded-lg border border-white/10 bg-white/5 pl-9 pr-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-accent/40 focus:ring-2 focus:ring-accent/20 md:w-64"
-              />
-            </div>
-          </form>
+          <div className="ml-auto flex items-center gap-3">
+            <LiveSearch />
+
+            {auth?.user ? (
+              <>
+                {auth.user.is_admin ? (
+                  <a
+                    href="/admin"
+                    className="hidden rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-accent/40 hover:text-accent-soft md:inline-flex"
+                  >
+                    Admin
+                  </a>
+                ) : null}
+                <span className="hidden max-w-[10rem] truncate text-xs text-slate-400 lg:block">
+                  {auth.user.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-rose-400/40 hover:text-rose-200"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <a
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-night-950 transition hover:bg-accent-soft"
+              >
+                Login
+              </a>
+            )}
+          </div>
         </div>
       </header>
 

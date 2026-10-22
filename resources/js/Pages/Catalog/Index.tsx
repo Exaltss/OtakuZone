@@ -1,6 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
-import MainLayout from '@/Layouts/MainLayout';
 import { AnimeCard, CardItem, Poster, SectionHead, fmtEpisode } from '@/Components/AnimeCard';
 
 type Meta = {
@@ -294,7 +293,7 @@ export default function Index({ mode, items, meta, stats, filters, featured, lat
   };
 
   return (
-    <MainLayout>
+    <>
       <Head title={home ? 'Nonton Anime Sub Indo' : `Jelajah anime · halaman ${meta.page}`} />
 
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 md:px-6">
@@ -506,6 +505,6 @@ export default function Index({ mode, items, meta, stats, filters, featured, lat
           </>
         )}
       </div>
-    </MainLayout>
+    </>
   );
 }

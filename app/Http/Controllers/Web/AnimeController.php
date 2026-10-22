@@ -12,6 +12,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Anime;
 use App\Models\Episode;
+use App\Models\Rating;
 use App\Services\Stream\QualityResolver;
 use App\Support\SynopsisParser;
 use Illuminate\Http\Request;
@@ -64,6 +65,10 @@ final class AnimeController extends Controller
                 'year' => $anime->year,
                 'season' => $anime->season,
                 'rating_avg' => $anime->rating_avg,
+                'rating_count' => (int) Rating::query()->where('anime_id', $anime->id)->count(),
+                'rating_has_mine' => $this->actorHasRated($request, (int) $anime->id),
+                'vote_avg' => $anime->vote_avg === null ? null : (float) $anime->vote_avg,
+                'vote_count' => (int) ($anime->vote_count ?? 0),
                 'view_count' => $anime->view_count,
                 'cat_id' => $anime->cat_id,
                 'synopsis' => $parsed['synopsis'],
@@ -87,4 +92,23 @@ final class AnimeController extends Controller
         ]);
     }
 
+    /**
+     * Apakah aktor saat ini (user login atau guest via guest_key) sudah
+     * memberi rating untuk anime ini? Dipakai UI untuk menonaktifkan tombol.
+     */
+    private function actorHasRated(Request $request, int $animeId): bool
+    {
+        $user = $request->user();
+
+        return Rating::query()
+            ->where('anime_id', $animeId)
+            ->where(static function ($q) use ($user, $request): void {
+                if ($user !== null) {
+                    $q->where('user_id', (int) $user->id);
+                } else {
+                    $q->where('guest_key', substr(hash('sha256', $request->ip() . '|' . $request->session()->getId()), 0, 64));
+                }
+            })
+            ->exists();
+    }
 }

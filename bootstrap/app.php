@@ -1,13 +1,9 @@
 <?php
-/**
- * Zonaotaku v2-final-cpanel
- * File   : bootstrap/app.php
- * Fungsi : bootstrap Laravel 11 + Inertia + alias middleware lokal
- * Rujuk  : ZONAOTAKU_V2_FINAL.md §6.1, §7.3
- */
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureAdminAccess;
 use App\Http\Middleware\EnsureLocalAccess;
+use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,12 +17,18 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            ForceHttps::class,
             HandleInertiaRequests::class,
         ]);
 
         $middleware->alias([
             'local.only' => EnsureLocalAccess::class,
+            'admin.only' => EnsureAdminAccess::class,
         ]);
+
+        // Route login blueprint bernama 'auth.login'; arahkan guest ke path-nya
+        // agar middleware auth tidak melempar RouteNotFoundException (500).
+        $middleware->redirectGuestsTo('/login');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

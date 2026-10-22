@@ -1,6 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
-import MainLayout from '@/Layouts/MainLayout';
 import { fmtEpisode } from '@/Components/AnimeCard';
 
 type Anime = {
@@ -148,7 +147,7 @@ export default function Index({ anime, episode, qualities, defaultQuality, signM
   };
 
   return (
-    <MainLayout>
+    <>
       <Head title={`${anime.title} · Episode ${fmtEpisode(Number(episode.number))}`} />
 
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
@@ -285,6 +284,6 @@ export default function Index({ anime, episode, qualities, defaultQuality, signM
           </div>
         </section>
       </div>
-    </MainLayout>
+    </>
   );
 }

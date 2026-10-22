@@ -169,10 +169,18 @@ final class StreamProxy
         }
 
         $callback = function () use ($stream, $first, $chunkSize): void {
+            // Bila klien putus (pindah halaman / tutup tab), PHP harus berhenti
+            // memompa agar worker segera bebas dan request lain tidak mengantre.
+            ignore_user_abort(false);
+
             echo $first;
             flush();
 
             while (!$stream->eof()) {
+                if (connection_aborted()) {
+                    break;
+                }
+
                 $chunk = $stream->read($chunkSize);
 
                 if ($chunk === '') {
@@ -181,8 +189,18 @@ final class StreamProxy
 
                 echo $chunk;
                 flush();
+
+                if (connection_aborted()) {
+                    break;
+                }
+
                 usleep(1000);
                 @set_time_limit(60);
+            }
+
+            // lepas koneksi upstream sesegera mungkin supaya worker cepat bebas
+            if (is_object($stream) && method_exists($stream, 'close')) {
+                $stream->close();
             }
         };
 

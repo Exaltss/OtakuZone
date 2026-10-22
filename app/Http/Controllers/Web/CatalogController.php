@@ -59,11 +59,19 @@ final class CatalogController extends Controller
         }
 
         [$orderColumn, $orderDir] = match ($sort) {
-            'rating' => ['rating_avg', 'desc'],
+            'rating' => ['rating_avg', 'desc'],  // dipakai hanya bila bukan blend
             'views' => ['view_count', 'desc'],
             'title' => ['title', 'asc'],
             default => ['synced_at', 'desc'],
         };
+
+        // "Anime terbaik": blend Bayesian antara rating sumber dan vote komunitas
+        // (prior C=10 suara). 0 vote = urutan sumber; makin banyak vote, makin
+        // besar pengaruh komunitas -> peringkat bergeser secara alami.
+        if ($sort === 'rating') {
+            $blend = "((vote_count * COALESCE(vote_avg, 0)) + (10 * COALESCE(rating_avg, 0))) / (vote_count + 10)";
+            $query->orderByRaw($blend . ' DESC');
+        }
 
         $total = (clone $query)->count();
         $lastPage = max(1, (int) ceil($total / $perPage));
@@ -73,7 +81,7 @@ final class CatalogController extends Controller
         $items = $home
             ? collect()
             : $query
-                ->orderBy($orderColumn, $orderDir)
+                ->when($sort !== 'rating', fn ($q) => $q->orderBy($orderColumn, $orderDir))
                 ->orderBy('title')
                 ->offset($offset)
                 ->limit($perPage)
@@ -91,20 +99,37 @@ final class CatalogController extends Controller
         $yearCut = (int) now()->format('Y');
 
         $latest = $home
-            ? Anime::query()->visible()
-                ->where(static fn ($q) => $q->where('year', '>=', $yearCut)->orWhere('status', 'ongoing'))
-                ->joinSub(
-                    Episode::query()
-                        ->selectRaw('anime_id, MAX(synced_at) AS last_sync')
-                        ->groupBy('anime_id'),
-                    'ep_agg',
-                    'ep_agg.anime_id',
-                    '=',
-                    'anime.id'
-                )
-                ->orderByDesc('ep_agg.last_sync')
-                ->limit(12)
-                ->get(['anime.*'])
+            ? (static function () use ($yearCut): Collection {
+                // Ambil hanya episode paling baru (scan PK terbalik, terbatas),
+                // BUKAN agregat MAX(synced_at) atas SELURUH tabel episodes.
+                // Pada katalog ~90k episode, agregat lama memakan ratusan ms
+                // tiap load beranda; versi ini O(konstan).
+                $recent = Episode::query()
+                    ->orderByDesc('id')
+                    ->limit(600)
+                    ->get(['id', 'anime_id', 'synced_at']);
+
+                $lastSync = [];
+
+                foreach ($recent as $episode) {
+                    if (!isset($lastSync[$episode->anime_id])) {
+                        $lastSync[$episode->anime_id] = $episode->synced_at;
+                    }
+                }
+
+                if ($lastSync === []) {
+                    return collect();
+                }
+
+                return Anime::query()
+                    ->visible()
+                    ->whereIn('id', array_keys($lastSync))
+                    ->where(static fn ($q) => $q->where('year', '>=', $yearCut)->orWhere('status', 'ongoing'))
+                    ->get()
+                    ->sortByDesc(static fn (Anime $anime): mixed => $lastSync[$anime->id] ?? null)
+                    ->take(12)
+                    ->values();
+            })()
             : collect();
         $picks = $home ? Anime::query()->visible()->orderByDesc('rating_avg')->limit(12)->get() : collect();
         $popular = $home ? Anime::query()->visible()->orderByDesc('view_count')->limit(5)->get() : collect();
